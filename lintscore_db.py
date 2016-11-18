@@ -5,11 +5,12 @@
 from __future__ import print_function
 
 import datetime
+import os
 import sqlite3
 
 class Database(object):
     "The database class for lintscore."
-    
+
     def __init__(self, file_name):
         "Initialize the database."
 
@@ -38,8 +39,9 @@ class Database(object):
             cur.execute("insert into RECORD("
                         "commit_id, file_name, user, score, num_lines, "
                         "points_change, time) values (?, ?, ?, ?, ?, ?, ?)",
-                        (commit_id, file_name, user, score, num_lines,
-                         points_change, datetime.datetime.now()))
+                        (commit_id, file_name, user,
+                         score, num_lines, points_change,
+                         datetime.datetime.now()))
 
     def get_file_score(self, file_name):
         with self.con:
@@ -74,7 +76,7 @@ class Database(object):
                         "group by user "
                         "order by sum(POINTS_CHANGE) desc")
 
-            return cur.fetchall()
+            return [row for row in cur.fetchall() if row[1] > 0]
 
     def get_lowscore_table(self):
         "Summarize the POINTS (not score) for all users, sorted."
@@ -85,7 +87,7 @@ class Database(object):
                         "group by user "
                         "order by sum(POINTS_CHANGE) asc")
 
-            return cur.fetchall()
+            return [row for row in cur.fetchall() if row[1] < 0]
 
 if __name__ == "__main__":
     print("I ain't doin' shit.")
