@@ -35,7 +35,6 @@ class Database(object):
         with self.con:
             cur = self.con.cursor()
 
-            print("INSERT")
             cur.execute("insert into RECORD("
                         "commit_id, file_name, user, score, num_lines, "
                         "points_change, time) values (?, ?, ?, ?, ?, ?, ?)",
@@ -66,8 +65,27 @@ class Database(object):
             except TypeError:
                 return 0
 
-    def get_all_users(self):
-        pass
+    def get_highscore_table(self):
+        "Summarize the POINTS (not score) for all users, sorted."
+        with self.con:
+            cur = self.con.cursor()
+
+            cur.execute("select USER, sum(POINTS_CHANGE) from RECORD "
+                        "group by user "
+                        "order by sum(POINTS_CHANGE) desc")
+
+            return cur.fetchall()
+
+    def get_lowscore_table(self):
+        "Summarize the POINTS (not score) for all users, sorted."
+        with self.con:
+            cur = self.con.cursor()
+
+            cur.execute("select USER, sum(POINTS_CHANGE) from RECORD "
+                        "group by user "
+                        "order by sum(POINTS_CHANGE) asc")
+
+            return cur.fetchall()
 
 if __name__ == "__main__":
     print("I ain't doin' shit.")
