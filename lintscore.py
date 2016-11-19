@@ -1,4 +1,5 @@
 #!/usr/bin/env python2.7
+"Evaluate a Python file."
 
 from __future__ import print_function
 
@@ -10,7 +11,7 @@ from pylint.reporters import BaseReporter
 
 import lintscore_db
 
-initial_points_appraisal = [
+INITIAL_POINTS_APPRAISAL = [
     [-50, "OH MY GOD, %s ISN'T BREATHING! DOES SOMEBODY KNOW PYTHON CPR?!"],
     [-40, "Whoa, whoa! Are you trying to KILL PyLint? %s looks TERRIBLE!"],
     [-30, "%s made PyLint SAD. I hope you're happy."],
@@ -18,13 +19,13 @@ initial_points_appraisal = [
     [-10, "PyLint just sighed when it saw %s."],
     [0, "PyLint says %s is pretty meh."],
     [10, "PyLint has seen a lot worse than %s, but it's seen better too."],
-    [20, "%s looks pretty decent."],
+    [20, "%s looks pretty decent, but could easily be improved."],
     [30, "%s looks pretty good, well done."],
     [40, "%s looks really good, you just gave PyLint a happy."],
     [50, "%s just made PyLint's day. Great job!"],
 ]
 
-point_change_appraisal = [
+POINT_CHANGE_APPRAISAL = [
     [-50, "You bastard, you killed %s!"],
     [-40, "AAAAAH! %s just gave poor old PyLint a heart attack!"],
     [-30, "Oh my God, what did you do to %s?!"],
@@ -39,6 +40,14 @@ point_change_appraisal = [
     [50, "Amazing job on %s! It looks SO much better now."]
 ]
 
+OVERALL_APPRAISAL = [
+    [-100, "This code REALLY needs some PyLint. Like, seriously."],
+    [-50, "This code could use a serious cleanup. Use PyLint."],
+    [-20, "Consider using PyLint to improve code quality."],
+    [0, "I've seen worse, but PyLint would help."],
+    [20, "Overall, you're improving the code. Nice job."],
+]
+
 class App(object):
     "Application which keeps score of how well-written Python files are."
 
@@ -48,14 +57,20 @@ class App(object):
 
     def run(self, file_names):
         "Start the application."
+        points_awarded = 0
 
         for file_name in file_names:
-            self.handle_file(file_name)
+            points_awarded += self.handle_file(file_name)
+
+        print("Points awarded in this run: %d" % points_awarded)
+        if points_awarded < 0:
+            print("Consider using pylint to improve your code quality.")
+        print()
 
         self.show_score_tables()
 
     def handle_file(self, file_name):
-        "Analyze a file."
+        "Analyze a file. Return the points awarded."
         prev_score = self.database.get_file_score(file_name)
         prev_num_lines = self.database.get_file_num_lines(file_name)
         prev_points = self.calc_points(prev_score, prev_num_lines)
@@ -91,6 +106,7 @@ class App(object):
 
         self.database.add_record("#000000", file_name, "Christer",
                                  score, num_lines, points_change)
+        return points_change
 
     def show_score_tables(self):
         "Print Hall of Fame and Hall of Shame."
@@ -132,7 +148,7 @@ class App(object):
         file_name = os.path.basename(file_name)
         reward = cls.get_points_rewarded(point_change)
 
-        for threshold, comment in point_change_appraisal:
+        for threshold, comment in POINT_CHANGE_APPRAISAL:
             if point_change < threshold:
                 return (comment % file_name) + " " + reward
 
@@ -146,7 +162,7 @@ class App(object):
         file_name = os.path.basename(file_name)
         reward = cls.get_points_rewarded(points)
 
-        for threshold, comment in initial_points_appraisal:
+        for threshold, comment in INITIAL_POINTS_APPRAISAL:
             if points < threshold:
                 return (comment % file_name) + " " + reward
 
@@ -200,7 +216,7 @@ class QuietReporter(BaseReporter):
 
 if __name__ == "__main__":
     if len(sys.argv) < 2:
-        print("Usage: %s [file1] [file2] ... [fileN]" % sys.args[0])
+        print("Usage: %s [file1] [file2] ... [fileN]" % sys.argv[0])
         sys.exit(1)
     App("lintscore").run(sys.argv[1:])
 
