@@ -5,7 +5,6 @@
 from __future__ import print_function
 
 import datetime
-import os
 import sqlite3
 
 class Database(object):
@@ -44,6 +43,7 @@ class Database(object):
                          datetime.datetime.now()))
 
     def get_file_score(self, file_name):
+        "Return the latest PyLint score for a file from the database."
         with self.con:
             cur = self.con.cursor()
 
@@ -56,6 +56,7 @@ class Database(object):
                 return 0
 
     def get_file_num_lines(self, file_name):
+        "Return the number of lines the file had last time."
         with self.con:
             cur = self.con.cursor()
 
