@@ -3,6 +3,7 @@
 
 from __future__ import print_function
 
+import argparse
 import os
 import sys
 
@@ -11,33 +12,33 @@ from pylint.reporters import BaseReporter
 
 import lintscore_db
 
-INITIAL_POINTS_APPRAISAL = [
-    [-50, "OH MY GOD, %s ISN'T BREATHING! DOES SOMEBODY KNOW PYTHON CPR?!"],
-    [-40, "Whoa, whoa! Are you trying to KILL PyLint? %s looks TERRIBLE!"],
-    [-30, "%s made PyLint SAD. I hope you're happy."],
-    [-20, "PyLint looked at %s. PyLint was not impressed."],
-    [-10, "PyLint just sighed when it saw %s."],
-    [0, "PyLint says %s is pretty meh."],
-    [10, "PyLint has seen a lot worse than %s, but it's seen better too."],
-    [20, "%s looks pretty decent, but could easily be improved."],
-    [30, "%s looks pretty good, well done."],
-    [40, "%s looks really good, you just gave PyLint a happy."],
-    [50, "%s just made PyLint's day. Great job!"],
+SCORE_APPRAISAL = [
+    [1.00, "OH MY GOD, PYLINT ISN'T BREATHING! DOES SOMEBODY KNOW PYTHON CPR?!"],
+    [2.00, "Whoa, whoa! Are you trying to KILL PyLint? That's TERRIBLE!"],
+    [3.00, "You made PyLint SAD. I hope you're happy."],
+    [4.00, "PyLint looked at your file. PyLint was not impressed."],
+    [5.00, "PyLint just sighed when it saw this file."],
+    [6.00, "PyLint says your file is pretty meh."],
+    [7.00, "PyLint has seen a lot worse, but it's seen better too."],
+    [8.00, "This looks pretty decent, but could easily be improved."],
+    [9.00, "This looks pretty good, well done."],
+    [9.99, "This looks really good, you just gave PyLint a happy."],
+    [50, "That's absolutely PERFECT!"],
 ]
 
 POINT_CHANGE_APPRAISAL = [
-    [-50, "You bastard, you killed %s!"],
-    [-40, "AAAAAH! %s just gave poor old PyLint a heart attack!"],
-    [-30, "Oh my God, what did you do to %s?!"],
-    [-20, "You're really messing up %s!"],
-    [-10, "You're making %s worse. Stop it."],
-    [0, "You made %s a little worse, but not too bad."],
-    [1, "%s looks about the same as it used to."],
-    [10, "I see you've improved %s slightly. Nice."],
-    [20, "Nice work, %s is been improved!"],
-    [30, "Very nice work indeed, %s is looking a lot better!"],
-    [40, "Wow! You've really cleaned up %s! Well done!"],
-    [50, "Amazing job on %s! It looks SO much better now."]
+    [-50, "You killed PyLint! You BASTARD!"],
+    [-40, "AAAAAH! You just gave poor old PyLint a heart attack!"],
+    [-30, "Oh my God, what did you do to that poor file?!"],
+    [-20, "You're really messing it up!"],
+    [-10, "You're making it worse. Stop it."],
+    [0, "You made it a little worse, but not too bad."],
+    [1, "It looks about the same as it used to."],
+    [10, "I see you've improved it slightly. Nice."],
+    [20, "Nice work, the file has been improved!"],
+    [30, "Very nice work indeed, it looks a lot better now!"],
+    [40, "Wow! You've really cleaned it up! Well done!"],
+    [50, "Amazing job! It looks SO much better now."]
 ]
 
 OVERALL_APPRAISAL = [
@@ -53,16 +54,28 @@ class App(object):
 
     def __init__(self, name):
         self.name = name
-        self.database = lintscore_db.Database("lintscore.db")
+        self.database = None
 
-    def run(self, file_names):
+    def run(self):
         "Start the application."
         points_awarded = 0
 
-        for file_name in file_names:
+        parser = argparse.ArgumentParser()
+        parser.add_argument("-d", "--database", type=str, default="lintscore.db",
+                            help="specify which database to use")
+        parser.add_argument("file_names", metavar="filename", type=str, nargs="+",
+                            help="a file to process")
+        args = parser.parse_args()
+
+        print("Files: %s" % args.file_names)
+        print("Database: %s" % args.database)
+
+        self.database = lintscore_db.Database(args.database)
+
+        for file_name in args.file_names:
             points_awarded += self.handle_file(file_name)
 
-        print("Points awarded in this run: %d" % points_awarded)
+        print("Total points awarded in this run: %d" % points_awarded)
         if points_awarded < 0:
             print("Consider using pylint to improve your code quality.")
         print()
@@ -74,10 +87,10 @@ class App(object):
         prev_score = self.database.get_file_score(file_name)
         prev_num_lines = self.database.get_file_num_lines(file_name)
         prev_points = self.calc_points(prev_score, prev_num_lines)
-        #sys.stdout.write("Analyzing " + file_name + "... ")
+        sys.stdout.write("Analyzing " + file_name + "... ")
         try:
             score = self.run_pylint(file_name)
-            #sys.stdout.write("done. ")
+            print("done. PyLint score: %2.2f" % score)
         except KeyError:
             print("failed.")
             print("Couldn't analyze %s." % file_name)
@@ -85,6 +98,10 @@ class App(object):
         num_lines = self.count_file_lines(file_name)
         points = self.calc_points(score, num_lines)
         points_change = points - prev_points
+
+        if score == 10.0 and points_change < 0:
+            points_change = 0
+
         #print("Points: %d (previous: %d)" % (points, prev_points))
 
         # print("prev_score      : %2.2f" % prev_score)
@@ -99,10 +116,11 @@ class App(object):
         # print("num_lines change: %d" % (num_lines - prev_num_lines))
         # print("points change   : %d" % points_change)
 
-        if prev_num_lines == 0:
-            print(self.get_initial_points_appraisal(file_name, points))
-        else:
-            print(self.get_point_change_appraisal(file_name, points_change))
+        print(self.get_score_appraisal(file_name, score))
+
+        if prev_num_lines is not 0: # If this is not a new file
+            print("  - " + self.get_point_change_appraisal(file_name,
+                                                           points_change))
 
         self.database.add_record("#000000", file_name, "Christer",
                                  score, num_lines, points_change)
@@ -150,23 +168,19 @@ class App(object):
 
         for threshold, comment in POINT_CHANGE_APPRAISAL:
             if point_change < threshold:
-                return (comment % file_name) + " " + reward
+                return comment + " " + reward
 
-        return ("I cannot BELIEVE how much you've improved %s!" % file_name) + \
-            reward
+        return "I cannot BELIEVE how much you've improved it! " + reward
 
     @classmethod
-    def get_initial_points_appraisal(cls, file_name, points):
-        "Return a verbal description of the state of a file."
+    def get_score_appraisal(cls, file_name, score):
+        "Return a verbal description of the state of a file based on PyLint score."
 
         file_name = os.path.basename(file_name)
-        reward = cls.get_points_rewarded(points)
 
-        for threshold, comment in INITIAL_POINTS_APPRAISAL:
-            if points < threshold:
-                return (comment % file_name) + " " + reward
-
-        return ("%s looks absolutely PERFECT! " % file_name) + reward
+        for threshold, comment in SCORE_APPRAISAL:
+            if score < threshold:
+                return "  - %s" % comment
 
     @classmethod
     def get_points_rewarded(cls, points):
@@ -182,7 +196,7 @@ class App(object):
     @classmethod
     def calc_points(cls, score, num_lines):
         "Return points based on score and number of lines."
-        return int((score - 5.0) * num_lines / 25)
+        return int((score - 5.0) * num_lines / 40)
 
     @classmethod
     def make_score_table(cls, title, rows):
@@ -215,8 +229,5 @@ class QuietReporter(BaseReporter):
 
 
 if __name__ == "__main__":
-    if len(sys.argv) < 2:
-        print("Usage: %s [file1] [file2] ... [fileN]" % sys.argv[0])
-        sys.exit(1)
-    App("lintscore").run(sys.argv[1:])
+    App("lintscore").run()
 
