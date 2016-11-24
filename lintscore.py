@@ -66,7 +66,9 @@ class App(object):
         parser = argparse.ArgumentParser()
         parser.add_argument("-d", "--database", type=str, default="lintscore.db",
                             help="specify which database to use")
-        parser.add_argument("file_names", metavar="filename", type=str, nargs="+",
+        parser.add_argument("-t", "--tables-only", action="store_true",
+                            help="only show score tables and exit")
+        parser.add_argument("file_names", metavar="filename", type=str, nargs="*",
                             help="a file to process")
         args = parser.parse_args()
 
@@ -78,13 +80,15 @@ class App(object):
                   file=sys.stderr)
             sys.exit(1)
 
-        for file_name in args.file_names:
-            points_awarded += self.handle_file(file_name)
+        if args.tables_only is False:
+            for file_name in args.file_names:
+                points_awarded += self.handle_file(file_name)
 
-        print("Total points awarded in this run: %d" % points_awarded)
-        if points_awarded < 0:
-            print("Consider using pylint to improve your code quality.")
-        print()
+            print("\nTotal points awarded in this run: %d" % points_awarded)
+
+            if points_awarded < 0:
+                print("Consider using pylint to improve your code quality.")
+            print()
 
         print(self.get_score_tables())
 
@@ -128,7 +132,7 @@ class App(object):
     def get_score_tables(self):
         "Return Hall of Fame and Hall of Shame."
         output = ""
-        
+
         rows = self.database.get_highscore_table()
         highscore_table = self.make_score_table("Hall of Fame (yay!)", rows)
 
@@ -148,7 +152,7 @@ class App(object):
             output += "\n"
 
         return output
-            
+
     @classmethod
     def run_pylint(cls, file_name):
         "Run pylint on the specified file. Return the pylint score."
