@@ -24,26 +24,25 @@ class Database(object):
                         "FILE_NAME     text,"
                         "USER          text,"
                         "SCORE         float,"
-                        "NUM_LINES     int,"
-                        "POINTS_CHANGE int,"
+                        "POINTS        int,"
                         "TIME          timestamp);")
 
 
-    def add_record(self, commit_id, file_name, user, score, num_lines,
-                   points_change):
+    def add_record(self, commit_id, file_name, user, score, points):
         "Add one record to the database."
         with self.con:
             cur = self.con.cursor()
 
             cur.execute("insert into RECORD("
-                        "commit_id, file_name, user, score, num_lines, "
-                        "points_change, time) values (?, ?, ?, ?, ?, ?, ?)",
+                        "commit_id, file_name, user, score, "
+                        "points, time) values (?, ?, ?, ?, ?, ?)",
                         (commit_id, file_name, user,
-                         score, num_lines, points_change,
+                         score, points,
                          datetime.datetime.now()))
 
     def get_file_score(self, file_name):
-        "Return the latest PyLint score for a file from the database."
+        """Return the latest PyLint score for a file from the database,
+        or None if none exist."""
         with self.con:
             cur = self.con.cursor()
 
@@ -53,7 +52,7 @@ class Database(object):
             try:
                 return float(cur.fetchone()[0])
             except TypeError:
-                return 0
+                return None
 
     def get_file_num_lines(self, file_name):
         "Return the number of lines the file had last time."
@@ -73,9 +72,9 @@ class Database(object):
         with self.con:
             cur = self.con.cursor()
 
-            cur.execute("select USER, sum(POINTS_CHANGE) from RECORD "
+            cur.execute("select USER, sum(POINTS) from RECORD "
                         "group by user "
-                        "order by sum(POINTS_CHANGE) desc")
+                        "order by sum(POINTS) desc")
 
             return [row for row in cur.fetchall() if row[1] > 0]
 
@@ -84,9 +83,9 @@ class Database(object):
         with self.con:
             cur = self.con.cursor()
 
-            cur.execute("select USER, sum(POINTS_CHANGE) from RECORD "
+            cur.execute("select USER, sum(POINTS) from RECORD "
                         "group by user "
-                        "order by sum(POINTS_CHANGE) asc")
+                        "order by sum(POINTS) asc")
 
             return [row for row in cur.fetchall() if row[1] < 0]
 
