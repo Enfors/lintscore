@@ -6,6 +6,7 @@ from __future__ import print_function
 import argparse
 import os
 import sys
+import sqlite3
 
 from pylint.lint import Run
 from pylint.reporters import BaseReporter
@@ -69,10 +70,13 @@ class App(object):
                             help="a file to process")
         args = parser.parse_args()
 
-        print("Files: %s" % ", ".join(args.file_names))
-        print("Database: %s" % args.database)
-
-        self.database = lintscore_db.Database(args.database)
+        try:
+            self.database = lintscore_db.Database(args.database)
+        except sqlite3.OperationalError as error:
+            print("Unable to open database %s: %s" % \
+                  (os.path.abspath(args.database), error),
+                  file=sys.stderr)
+            sys.exit(1)
 
         for file_name in args.file_names:
             points_awarded += self.handle_file(file_name)
@@ -82,7 +86,7 @@ class App(object):
             print("Consider using pylint to improve your code quality.")
         print()
 
-        self.show_score_tables()
+        print(self.get_score_tables())
 
     def handle_file(self, file_name):
         "Analyze a file. Return the points awarded."
@@ -121,8 +125,10 @@ class App(object):
                                  score, points)
         return points
 
-    def show_score_tables(self):
-        "Print Hall of Fame and Hall of Shame."
+    def get_score_tables(self):
+        "Return Hall of Fame and Hall of Shame."
+        output = ""
+        
         rows = self.database.get_highscore_table()
         highscore_table = self.make_score_table("Hall of Fame (yay!)", rows)
 
@@ -134,13 +140,15 @@ class App(object):
 
         for line_num in range(0, table_lines):
             if line_num < len(highscore_table):
-                sys.stdout.write(highscore_table[line_num] + " ")
+                output += highscore_table[line_num] + " "
             else:
-                sys.stdout.write(" " * (len(lowscore_table[line_num]) + 1))
+                output += " " * (len(lowscore_table[line_num]) + 1)
             if line_num < len(lowscore_table):
-                sys.stdout.write(lowscore_table[line_num])
-            print()
+                output += lowscore_table[line_num]
+            output += "\n"
 
+        return output
+            
     @classmethod
     def run_pylint(cls, file_name):
         "Run pylint on the specified file. Return the pylint score."
