@@ -25,7 +25,7 @@ SCORE_APPRAISAL = [
     [8.00, "This looks pretty decent, but could easily be improved."],
     [9.00, "This looks pretty good."],
     [9.99, "This looks really good, you just gave PyLint a happy."],
-    [50, "That's absolutely PERFECT!"],
+    [50, "Mmm, yes. Tasty file. PyLint approves."],
 ]
 
 POINTS_APPRAISAL = [
