@@ -4,6 +4,7 @@
 from __future__ import print_function
 
 import argparse
+import getpass
 import os
 import sys
 try:
@@ -27,7 +28,7 @@ SCORE_APPRAISAL = [
     [8.00, "This looks pretty decent, but could easily be improved."],
     [9.00, "This looks pretty good."],
     [9.99, "This looks really good, you just gave PyLint a happy."],
-    [50, "That's absolutely PERFECT!"],
+    [50, "Mmm, yes. Tasty file. PyLint approves."],
 ]
 
 POINTS_APPRAISAL = [
@@ -61,6 +62,7 @@ class App(object):
     def __init__(self, name):
         self.name = name
         self.database = None
+        self.user = None
 
     def run(self):
         "Start the application."
@@ -69,11 +71,15 @@ class App(object):
         parser = argparse.ArgumentParser()
         parser.add_argument("-d", "--database", type=str, default="lintscore.db",
                             help="specify which database to use")
+        parser.add_argument("-u", "--user", type=str, default=getpass.getuser(),
+                            help="specify which user to credit")
         parser.add_argument("-t", "--tables-only", action="store_true",
                             help="only show score tables and exit")
         parser.add_argument("file_names", metavar="filename", type=str, nargs="*",
                             help="a file to process")
         args = parser.parse_args()
+
+        self.user = self.handle_user(args.user)
 
         try:
             self.database = lintscore_db.Database(args.database)
@@ -128,7 +134,7 @@ class App(object):
 
         print(self.get_points_rewarded(points))
 
-        self.database.add_record("#000000", file_name, "Enfors",
+        self.database.add_record("#000000", file_name, self.user,
                                  score, points)
         return points
 
@@ -155,6 +161,11 @@ class App(object):
             output += "\n"
 
         return output
+
+    @staticmethod
+    def handle_user(user):
+        "Capitalize the first letter of each word in the user string."
+        return user.title()
 
     @classmethod
     def run_pylint(cls, file_name):
