@@ -111,7 +111,7 @@ class App(object):
         except KeyError:
             print("failed.")
             print("Couldn't analyze %s." % file_name)
-            sys.exit(0)
+            return 0
         num_lines = self.count_file_lines(file_name)
         points = self.calc_points(prev_score, score, num_lines)
 
