@@ -81,7 +81,7 @@ class App(object):
             print("Unable to open database %s: %s" % \
                   (os.path.abspath(args.database), error),
                   file=sys.stderr)
-            sys.exit(1)
+            sys.exit(0)
 
         if args.tables_only is False:
             for file_name in args.file_names:
@@ -105,7 +105,7 @@ class App(object):
         except KeyError:
             print("failed.")
             print("Couldn't analyze %s." % file_name)
-            sys.exit(2)
+            sys.exit(0)
         num_lines = self.count_file_lines(file_name)
         points = self.calc_points(prev_score, score, num_lines)
 
