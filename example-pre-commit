@@ -1,0 +1,43 @@
+#!/bin/sh
+
+LINTSCORE_DIR="/config/lintscore"
+LINTSCORE_SCRIPT="$LINTSCORE_DIR/lintscore.py"
+LINTSCORE_DB="$LINTSCORE_DIR/lintscore.db"
+LINTSCORE_DEBUG=
+
+# Send all output to stderr
+exec 1>&2
+
+function debug_msg()
+{
+    if [ -z "$LINTSCORE_DEBUG" ]; then
+        return 0;
+    fi
+
+    echo "LINTSCORE_DEBUG: $*"
+}
+
+function main()
+{
+    debug_msg "Starting."
+
+    changed_files=$(git diff --name-only --cached | grep -i ".*\.py")
+    user_name=$(git log -1 --format=format:%an HEAD)
+
+    if [ -z "$user_name" ]; then
+        echo "lintscore-pre-commit: Unable to find user name. Won't run lintscore."
+	exit 0
+    fi
+
+    if [ -n "$changed_files" ]; then
+        debug_msg "Running lintscore on commited Python file(s)..."
+
+        ../lintscore/lintscore.py -d $LINTSCORE_DB -u "$user_name" $changed_files
+    else
+	debug_msg "No Python files to run lintscore on."
+    fi
+
+    debug_msg "Done."
+    }
+
+main
