@@ -6,7 +6,10 @@ from __future__ import print_function
 import argparse
 import os
 import sys
-import sqlite3
+try:
+    import sqlite3
+except ImportError:
+     from pysqlite2 import dbapi2 as sqlite3
 
 from pylint.lint import Run
 from pylint.reporters import BaseReporter

@@ -5,7 +5,10 @@
 from __future__ import print_function
 
 import datetime
-import sqlite3
+try:
+    import sqlite3
+except ImportError:
+     from pysqlite2 import dbapi2 as sqlite3
 
 class Database(object):
     "The database class for lintscore."
