@@ -75,6 +75,8 @@ class App(object):
                             help="specify which user to credit")
         parser.add_argument("-t", "--tables-only", action="store_true",
                             help="only show score tables and exit")
+        parser.add_argument("-m", "--mattermost-format", action="store_true",
+                            help="show score table in Mattermost format")
         parser.add_argument("file_names", metavar="filename", type=str, nargs="*",
                             help="a file to process")
         args = parser.parse_args()
@@ -99,7 +101,7 @@ class App(object):
                 print("Consider using pylint to improve your code quality.")
             print()
 
-        print(self.get_score_tables())
+        print(self.get_score_tables(args.mattermost_format))
 
     def handle_file(self, file_name):
         "Analyze a file. Return the points awarded."
@@ -138,28 +140,39 @@ class App(object):
                                  score, points)
         return points
 
-    def get_score_tables(self):
+    def get_score_tables(self, mattermost_format=False):
         "Return Hall of Fame and Hall of Shame."
-        output = ""
+
+        if not mattermost_format:
+            output = ""
+        else:
+            output = "# Lintscore points\n"
 
         rows = self.database.get_highscore_table()
-        highscore_table = self.make_score_table("Hall of Fame (yay!)", rows)
+        highscore_table = self.make_score_table("Hall of Fame (yay!)", rows,
+                                                mattermost_format)
 
         rows = self.database.get_lowscore_table()
         lowscore_table = self.make_score_table("Hall of Shame (boo, hiss)",
-                                               rows)
+                                               rows, mattermost_format)
 
         table_lines = max([len(highscore_table), len(lowscore_table)])
 
-        for line_num in range(0, table_lines):
-            if line_num < len(highscore_table):
-                output += highscore_table[line_num] + " "
-            else:
-                output += " " * (len(lowscore_table[line_num]) + 1)
-            if line_num < len(lowscore_table):
-                output += lowscore_table[line_num]
-            output += "\n"
-
+        if not mattermost_format: # print tables side by side
+            for line_num in range(0, table_lines):
+                if line_num < len(highscore_table):
+                    output += highscore_table[line_num] + " "
+                else:
+                    output += " " * (len(lowscore_table[line_num]) + 1)
+                if line_num < len(lowscore_table):
+                    output += lowscore_table[line_num]
+                output += "\n"
+        else: # if mattermost_format (print tables above and below):
+            for table in [ highscore_table, lowscore_table]:
+                for line_num in range(0, len(table)):
+                    output += table[line_num] + "\n"
+                output += "\n"
+                    
         return output
 
     @staticmethod
@@ -222,18 +235,23 @@ class App(object):
         return int((score - prev_score) * num_lines / 10)
 
     @classmethod
-    def make_score_table(cls, title, rows):
+    def make_score_table(cls, title, rows, mattermost_format=False):
         "Return a list of string representing a score table."
         table = []
-        divider = "+----------------------------+-------+"
 
         if len(rows) < 1:
             return []
 
-        table.append(title + " " * (len(divider) - len(title)))
-        # table.append("%s%s" % ("=" * len(title),
-        #                        " " * (len(divider) - len(title))))
-        table.append(divider)
+        if not mattermost_format:
+            divider = "+----------------------------+-------+"
+            table.append(title + " " * (len(divider) - len(title)))
+        else:
+            divider = "|:---------------------------|------:|"
+            table.append("|" + title + " " * ((len(divider) - len(title)) - 10) +
+                         "| Score |")
+
+        if not mattermost_format:
+            table.append(divider)
 
         for row in rows:
             table.append("|%-28s|%7d|" % (row[0], row[1]))
