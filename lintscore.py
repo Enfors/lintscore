@@ -177,11 +177,11 @@ class App(object):
                     output += lowscore_table[line_num]
                 output += "\n"
         else: # if mattermost_format (print tables above and below):
-            for table in [ highscore_table, lowscore_table]:
+            for table in [highscore_table, lowscore_table]:
                 for line_num in range(0, len(table)):
                     output += table[line_num] + "\n"
                 output += "\n"
-                    
+
         return output
 
     @staticmethod
