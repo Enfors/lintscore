@@ -8,7 +8,7 @@ import datetime
 try:
     import sqlite3
 except ImportError:
-     from pysqlite2 import dbapi2 as sqlite3
+    from pysqlite2 import dbapi2 as sqlite3
 
 class Database(object):
     "The database class for lintscore."
@@ -70,27 +70,34 @@ class Database(object):
             except TypeError:
                 return 0
 
-    def get_highscore_table(self):
+    def get_score_table(self, only_days=0, asc_or_desc="desc"):
         "Summarize the POINTS (not score) for all users, sorted."
+
         with self.con:
+
+            sql = "select USER, sum(POINTS) from RECORD "
+            if only_days:
+                sql += "where TIME >= datetime('now', 'localtime', " + \
+                       "'-%d day') " % only_days
+            sql += "group by user order by sum(POINTS) %s" % asc_or_desc
+
             cur = self.con.cursor()
+            cur.execute(sql)
 
-            cur.execute("select USER, sum(POINTS) from RECORD "
-                        "group by user "
-                        "order by sum(POINTS) desc")
+            if asc_or_desc == "desc":
+                return [row for row in cur.fetchall() if row[1] > 0]
+            else:
+                return [row for row in cur.fetchall() if row[1] < 0]
 
-            return [row for row in cur.fetchall() if row[1] > 0]
 
-    def get_lowscore_table(self):
-        "Summarize the POINTS (not score) for all users, sorted."
-        with self.con:
-            cur = self.con.cursor()
+    def get_highscore_table(self, only_days=0):
+        "Get the highscore table."
+        return self.get_score_table(only_days, "desc")
 
-            cur.execute("select USER, sum(POINTS) from RECORD "
-                        "group by user "
-                        "order by sum(POINTS) asc")
+    def get_lowscore_table(self, only_days=0):
+        "Get the lowscore table."
+        return self.get_score_table(only_days, "asc")
 
-            return [row for row in cur.fetchall() if row[1] < 0]
 
 if __name__ == "__main__":
     print("I ain't doin' shit.")

@@ -77,6 +77,8 @@ class App(object):
                             help="only show score tables and exit")
         parser.add_argument("-m", "--mattermost-format", action="store_true",
                             help="show score table in Mattermost format")
+        parser.add_argument("-o", "--only-days", type=int, default=0,
+                            help="only show results from past X days")
         parser.add_argument("file_names", metavar="filename", type=str, nargs="*",
                             help="a file to process")
         args = parser.parse_args()
@@ -101,7 +103,7 @@ class App(object):
                 print("Consider using pylint to improve your code quality.")
             print()
 
-        print(self.get_score_tables(args.mattermost_format))
+        print(self.get_score_tables(args.mattermost_format, args.only_days))
 
     def handle_file(self, file_name):
         "Analyze a file. Return the points awarded."
@@ -140,19 +142,26 @@ class App(object):
                                  score, points)
         return points
 
-    def get_score_tables(self, mattermost_format=False):
+    def get_score_tables(self, mattermost_format=False, only_days=0):
         "Return Hall of Fame and Hall of Shame."
 
         if not mattermost_format:
             output = ""
         else:
-            output = "# Lintscore points\n"
+            output = "# Lintscore points"
+            if only_days:
+                output += " for the past "
+                if only_days == 1:
+                    output += "day"
+                else:
+                    output += "%d days" % only_days
+            output += "\n"
 
-        rows = self.database.get_highscore_table()
+        rows = self.database.get_highscore_table(only_days)
         highscore_table = self.make_score_table("Hall of Fame (yay!)", rows,
                                                 mattermost_format)
 
-        rows = self.database.get_lowscore_table()
+        rows = self.database.get_lowscore_table(only_days)
         lowscore_table = self.make_score_table("Hall of Shame (boo, hiss)",
                                                rows, mattermost_format)
 
@@ -250,13 +259,13 @@ class App(object):
             table.append("|" + title + " " * ((len(divider) - len(title)) - 10) +
                          "| Score |")
 
-        if not mattermost_format:
-            table.append(divider)
+        table.append(divider)
 
         for row in rows:
             table.append("|%-28s|%7d|" % (row[0], row[1]))
 
-        table.append(divider)
+        if not mattermost_format:
+            table.append(divider)
 
         return table
 
